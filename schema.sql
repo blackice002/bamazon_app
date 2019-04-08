@@ -1,20 +1,22 @@
 -- Create a MySQL Database called bamazon.
 
 DROP DATABASE IF EXISTS bamazon_DB;
-CREATE DATABASE bamazon_DB
+CREATE DATABASE bamazon_DB;
+
+USE bamazon_DB;
 -- Then create a Table inside of that database called products.
+
 CREATE TABLE products(
 -- The products table should have each of the following columns:
-
 
 -- item_id (unique id for each product)
 item_id INT AUTO_INCREMENT NOT NULL,
 
 -- product_name (Name of product)
 
-product_name VARCHAR (100) NOT NULL,
+product_name VARCHAR(100) NOT NULL,
 -- department_name
-department_name VARCHAR (100) NOT NULL,
+department_name VARCHAR(100) NOT NULL,
 
 -- price (cost to customer)
 price DECIMAL(10, 2) NOT NULL,
