@@ -1,8 +1,10 @@
-
 //Dependencies
 var inquirer = require('inquirer');
 var mysql = require('mysql');
 var Table = require('cli-table');  //display table
+var price =0;
+var newQty = 0;
+var stock =0;
 
 //localhost connection
 var connection = mysql.createConnection({
@@ -16,89 +18,111 @@ var connection = mysql.createConnection({
 connection.connect();
 
 productsList();
-//display product list
+
+
+//Display product list
 function productsList() {
 
+  // creating cli table
   var table = new Table({
     head: ['ID', 'Item', 'Department', 'Price', 'Stock'],
     colWidths: [10, 30, 30, 30, 30]
   });
-
+// data from database
   connection.query('SELECT * FROM products', function (error, res) {
     if (error) throw error;
-    // console.log(res);
+    console.log("connected as id " + connection.threadId)
+    displayItem();
+  });
+  function displayItem() {
+    console.log("Welcome to Bamazon ! Take a look at the products in our store!\n");
+    connection.query("SELECT * FROM products", function (err, res) {
+      if (err) throw err;
+      // declaration for table column and rows
+      for (i = 0; i < res.length; i++) {
+        var itemId = res[i].item_id,
+          productName = res[i].product_name,
+          departmentName = res[i].department_name,
+          price = res[i].price,
+          stockQuentity = res[i].stock_quentity;
+        table.push([itemId, productName, departmentName, price, stockQuentity]);
 
-    for (i = 0; i < res.length; i++) {
-      var itemId = res[i].item_id,
-        productName = res[i].product_name,
-        departmentName = res[i].department_name,
-        price = res[i].price,
-        stockQuentity = res[i].stock_quentity;
-      table.push([itemId, productName, departmentName, price, stockQuentity]);
+      };
+      console.log("------------------  Current Bamazon Products  ------------------ ")
+      console.log(table.toString());
+      // call back function for user
+      userPrompt();
+    })
+  }
+};
 
-    };
-    console.log("------------------  Current Bamazon Products  ------------------ ")
-    console.log(table.toString());
-    userPrompt();
-
-    // connection.end()
-  })
-}
 // user direction for itemPurchases
-
 function userPrompt() {
   inquirer.prompt([
     {
       message: "Please type in the product id you would like to order.",
       type: "input",
-      name: "prodId"
+      name: "prodId",
+      // valadiation for user input nonValue &nonNumber
+      validate: function (val) {
+        return (!isNaN(val) && parseInt(val) > 0)
+      }
     },
     {
       message: "how many of this item would you like to purchase",
       type: "input",
-      name: "prodQty"
-    }
-  ]).then(function (ans) {
-    var prodId = ans.prodId;
-    var prodQty = ans.prodQty;
-    // var allProd = getAllProd();
-    itemPurchases(prodId, prodQty)
-  });
-}
-// function for item purchases totoal price stock calculation 
-
-function itemPurchases(prodId, prodQty) {
-  connection.query('SELECT * FROM products', function (error, res) {
-    if (error) throw error;
-    var prod;
-    // console.log(res);
-    
-    for (var i = 0; i < res.length; i++) {
-      if (res[i].item_id == prodId) {
-        prod = res[i]
+      name: "prodQty",
+      validate: function (val) {
+        return (!isNaN(val) && parseInt(val) > 0 )
       }
     }
-    console.log(prod, "prod was found")
-    if (prod.stock_quantity >= prodQty) {
-      var newQty = prod.stock_quantity-prodQty;
-      orderComplete(prod, prodId, prodQty)
-      
-// console.log(totoalPrice)
+  ]).then(function (answer) { //storing user inputs as variables
+    var prodId = answer.prodId;
+    var prodQty = answer.prodQty;
+// fatching data from database based on user input 
+    connection.query("SELECT * FROM products WHERE ? ", [{item_id: prodId },{stock_quentity:stock}], function (err, res) {
+      if (err) throw err;
+      stock = parseInt(res[0].stock_quentity);
+      productName = res[0].product_name
+      console.log("--------------------------------");
+      console.log("| Your ordered:"+ productName);
+      console.log("| Amount of order:" + prodQty);
+      console.log("| Amount in stock: " + stock);
+      console.log("--------------------------------");
 
-      connection.end()
-    } else {
-      console.log("sorry the order has been cancled, there was insuffecent stock of this purchase")
-      connection.end()
-    }
-  })
+      if (prodQty > stock) {
+        console.log("Sorry we don't have enough item in stock");
+      }else {
+        price = res[0].price;
+        newQty = stock - prodQty;
+        // upadating database after user purchhased
+        connection.query("UPDATE products SET ? WHERE ? ", [{ stock_quentity: newQty }, { item_id: prodId },], function (err, res) {
+          if (err) throw err;
+          console.log("purching products ...\n");
+          console.log("--------------------------------");
+          // calculating total price based on productQuentity
+          var totalPrice = prodQty * price;
+          console.log("products purshased ! \n your total is $" + totalPrice.toFixed(2));
+          console.log("Thank you for shopping with us")
+          // moreOrder();
+        })
+
+      }
+    
+    })
+  });
 };
-function orderComplete(prodObj, prodId, prodQty) {
-  var newQuantity = prodObj.stock_quantity - prodQty;
-  var productSales = prodObj.price * prodQty;
-  var queryOne = "UPDATE products SET stock_quantity = ? where ?";
-  var queryTwo = "UPDATE products SET product_sales = ? where ?";
-  connection.query(queryOne, [newQuantity, { item_id: prodId }], function (error, res) {
-  })
-  connection.query(queryTwo, [productSales, { item_id: prodId }], function (error, res) {
-  })
-}
+
+// function moreOrder(){
+//   inquirer.prompt([{
+//   name:'choices',
+//   message:"Do you want to purchased more",
+//   type:'confirm'
+//   }]).then(function(){
+//     if('confirm'){
+//       productsList();
+//     }
+//       connection.end();
+//       console.log("See you again");
+//   });
+//   }
