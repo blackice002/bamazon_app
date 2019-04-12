@@ -2,9 +2,9 @@
 var inquirer = require('inquirer');
 var mysql = require('mysql');
 var Table = require('cli-table');  //display table
-var price =0;
+var price = 0;
 var newQty = 0;
-var stock =0;
+var stock = 0;
 
 //localhost connection
 var connection = mysql.createConnection({
@@ -28,7 +28,7 @@ function productsList() {
     head: ['ID', 'Item', 'Department', 'Price', 'Stock'],
     colWidths: [10, 30, 30, 30, 30]
   });
-// data from database
+  // data from database
   connection.query('SELECT * FROM products', function (error, res) {
     if (error) throw error;
     console.log("connected as id " + connection.threadId)
@@ -73,26 +73,29 @@ function userPrompt() {
       type: "input",
       name: "prodQty",
       validate: function (val) {
-        return (!isNaN(val) && parseInt(val) > 0 )
+        return (!isNaN(val) && parseInt(val) > 0)
       }
     }
   ]).then(function (answer) { //storing user inputs as variables
     var prodId = answer.prodId;
     var prodQty = answer.prodQty;
-// fatching data from database based on user input 
-    connection.query("SELECT * FROM products WHERE ? ", [{item_id: prodId },{stock_quentity:stock}], function (err, res) {
+    // fatching data from database based on user input 
+    connection.query("SELECT * FROM products WHERE ? ", [{ item_id: prodId }, { stock_quentity: stock }], function (err, res) {
       if (err) throw err;
       stock = parseInt(res[0].stock_quentity);
       productName = res[0].product_name
       console.log("--------------------------------");
-      console.log("| Your ordered:"+ productName);
+      console.log("| Your ordered:" + productName.toUpperCase());
       console.log("| Amount of order:" + prodQty);
       console.log("| Amount in stock: " + stock);
       console.log("--------------------------------");
 
       if (prodQty > stock) {
-        console.log("Sorry we don't have enough item in stock");
-      }else {
+        console.log("___________________________________________________________________\n")
+        console.log("Sorry we don't have enough item in stock\nchenage the order amount");
+        console.log("___________________________________________________________________")
+        productsList();
+      } else {
         price = res[0].price;
         newQty = stock - prodQty;
         // upadating database after user purchhased
@@ -104,25 +107,29 @@ function userPrompt() {
           var totalPrice = prodQty * price;
           console.log("products purshased ! \n your total is $" + totalPrice.toFixed(2));
           console.log("Thank you for shopping with us")
-          // moreOrder();
+          console.log("================================")
+          moreOrder();
         })
-
       }
-    
     })
   });
 };
+// function for reorder
+function moreOrder() {
+  inquirer.prompt([{
+    name: 'reply',
+    message: "Do you want to purchased more",
+    type: 'confirm',
+  }]).then(function (reAns) {
+    if (reAns.reply) {
+      productsList();
+    } else {
+      console.log("================================")
+      console.log("******* SEE YOU AGAIN **********");
+      console.log("================================")
 
-// function moreOrder(){
-//   inquirer.prompt([{
-//   name:'choices',
-//   message:"Do you want to purchased more",
-//   type:'confirm'
-//   }]).then(function(){
-//     if('confirm'){
-//       productsList();
-//     }
-//       connection.end();
-//       console.log("See you again");
-//   });
-//   }
+      connection.end();
+    }
+  })
+};
+
